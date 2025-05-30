@@ -6,8 +6,23 @@ def main():
     print("Logs from your program will appear here!")
 
     server_socket = socket.create_server(("localhost", 6379), reuse_port=True)
-    connection, _ = server_socket.accept()
-    connection.sendall(b"+PONG\r\n")
+    while True:
+        print("Waiting for new connection")
+        connection, _ = server_socket.accept()
+        print("New connection accepted")
+        try:
+            while True:
+                print("Waiting for data")
+                data = connection.recv(1024)
+                print(f"Received data: {data}")
+                if not data:  # Connection closed by client
+                    print("Connection closed by client")
+                    break
+                connection.sendall(b"+PONG\r\n")
+                print("Sent PONG response")
+        finally:
+            connection.close()
+            print("Connection closed")
 
 
 if __name__ == "__main__":
