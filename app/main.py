@@ -2,9 +2,14 @@ import socket  # noqa: F401
 import threading
 from .serializer import Serializer
 
+OK = b"+OK\r\n"
+PONG = b"+PONG\r\n"
+NULL = b"$-1\r\n"
+
 serializer = Serializer()
 
 def handle_client(connection):
+    h = {}
     try:
         while True:
             print("Waiting for data")
@@ -17,15 +22,39 @@ def handle_client(connection):
             if d_arr:
                 command = d_arr[0].upper()
                 if command == 'ECHO':
-                    connection.sendall(serializer.encode(d_arr[1:]))
+                    ret = serializer.encode(d_arr[1:])
+                    connection.sendall(ret)
                     print('Sent echo response')
                 elif command == 'PING':
-                    connection.sendall(b"+PONG\r\n")
+                    connection.sendall(PONG)
                     print('Sent pong response')
+                elif command == 'SET':
+                    try:
+                        key, value = d_arr[1], d_arr[2]
+                    except IndexError:
+                        print("SET command requires 2 arguments")
+                        connection.sendall(NULL)
+                        continue
+                    h[key] = value
+                    connection.sendall(OK)
+                    print(f"SET {key} {value}")
+                elif command == 'GET':
+                    try:
+                        key = d_arr[1]
+                    except IndexError:
+                        print("GET command requires 1 argument")
+                        connection.sendall(NULL)
+                        continue
+                    value = h.get(key)
+                    if value:
+                        ret = serializer.encode([value])
+                        connection.sendall(ret)
+                    else:
+                        connection.sendall(NULL)
                 else:
-                    connection.sendall(b"+\r\n")
+                    connection.sendall(NULL)
             else:
-                connection.sendall(b"+\r\n")
+                connection.sendall(NULL)
     finally:
         connection.close()
         print("Connection closed")

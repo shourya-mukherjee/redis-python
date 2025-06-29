@@ -15,7 +15,7 @@ class Serializer:
     
     def encode(self, arr): # array to bytecode string
         if len(arr) == 1:
-            return b'+' + arr[0].encode('utf-8') + b'\r\n'
+            return b'$' + str(len(arr[0])).encode('utf-8') + b'\r\n' + arr[0].encode('utf-8') + b'\r\n'
         else:
             n = str(len(arr)).encode('utf-8')
             ret = b'*' + n + b'\r\n'
