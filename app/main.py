@@ -1,5 +1,8 @@
 import socket  # noqa: F401
 import threading
+from .serializer import Serializer
+
+serializer = Serializer()
 
 def handle_client(connection):
     try:
@@ -10,8 +13,19 @@ def handle_client(connection):
             if not data:  # Connection closed by client
                 print("Connection closed by client")
                 break
-            connection.sendall(b"+PONG\r\n")
-            print("Sent PONG response")
+            d_arr = serializer.decode(data)
+            if d_arr:
+                command = d_arr[0].upper()
+                if command == 'ECHO':
+                    connection.sendall(serializer.encode(d_arr[1:]))
+                    print('Sent echo response')
+                elif command == 'PING':
+                    connection.sendall(b"+PONG\r\n")
+                    print('Sent pong response')
+                else:
+                    connection.sendall(b"+\r\n")
+            else:
+                connection.sendall(b"+\r\n")
     finally:
         connection.close()
         print("Connection closed")
