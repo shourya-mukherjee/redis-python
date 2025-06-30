@@ -1,6 +1,7 @@
 import socket  # noqa: F401
 import threading
 from .serializer import Serializer
+from .ttl_cache import TTLCache
 
 OK = b"+OK\r\n"
 PONG = b"+PONG\r\n"
@@ -9,7 +10,7 @@ NULL = b"$-1\r\n"
 serializer = Serializer()
 
 def handle_client(connection):
-    h = {}
+    h = TTLCache()
     try:
         while True:
             print("Waiting for data")
@@ -24,20 +25,22 @@ def handle_client(connection):
                 if command == 'ECHO':
                     ret = serializer.encode(d_arr[1:])
                     connection.sendall(ret)
-                    print('Sent echo response')
                 elif command == 'PING':
                     connection.sendall(PONG)
-                    print('Sent pong response')
                 elif command == 'SET':
+                    ttl = None
                     try:
                         key, value = d_arr[1], d_arr[2]
                     except IndexError:
-                        print("SET command requires 2 arguments")
+                        print("SET command requires at least 2 arguments")
                         connection.sendall(NULL)
                         continue
-                    h[key] = value
+                    try:
+                        ttl = int(d_arr[4])
+                    except IndexError:
+                        pass
+                    h.set(key, value, ttl)
                     connection.sendall(OK)
-                    print(f"SET {key} {value}")
                 elif command == 'GET':
                     try:
                         key = d_arr[1]
